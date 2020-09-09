@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import UserNotifications
 
 class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UISearchBarDelegate {
 
@@ -96,14 +97,29 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     
     //UITableViewDelegateプロトコルのメソッド。Deleteボタンが押された時にローカル通知をキャンセルし、データベースからタスクを削除する。【済】
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete{
-            try! realm.write{
-                self.realm.delete(self.taskArray[indexPath.row])//indexPath.rowが削除したいオブジェクトを入れる所
-                tableView.deleteRows(at: [indexPath], with: .fade)//この[indexePath]はcellの場所を表す
-                
-        
-            }
-        }
+         if editingStyle == .delete {
+                   // 削除するタスクを取得する
+                   let task = self.taskArray[indexPath.row]
+
+                   // ローカル通知をキャンセルする
+                   let center = UNUserNotificationCenter.current()
+                   center.removePendingNotificationRequests(withIdentifiers: [String(task.id)])
+
+                   // データベースから削除する
+                   try! realm.write {
+                       self.realm.delete(task)
+                       tableView.deleteRows(at: [indexPath], with: .fade)
+                   }
+
+                   // 未通知のローカル通知一覧をログ出力
+                   center.getPendingNotificationRequests { (requests: [UNNotificationRequest]) in
+                       for request in requests {
+                           print("/---------------")
+                           print(request)
+                           print("---------------/")
+                       }
+                   }
+               }
         
     }
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
